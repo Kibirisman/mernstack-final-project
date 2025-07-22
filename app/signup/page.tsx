@@ -7,13 +7,15 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { User, Mail, Lock, ShieldPlus, UserPlus, ArrowLeft, Users } from "lucide-react"
+import { User, Mail, Lock, ShieldPlus, UserPlus, ArrowLeft, Users, CheckCircle, AlertCircle } from "lucide-react"
 import Link from "next/link"
+import { useAuth } from "@/lib/auth/context"
 
 type UserRole = "teacher" | "student" | "parent"
 
 export default function SignUpPage() {
   const router = useRouter()
+  const { signup } = useAuth()
   const [formData, setFormData] = useState({
     firstName: "",
     secondName: "",
@@ -23,6 +25,8 @@ export default function SignUpPage() {
     role: "" as UserRole | "",
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
+  const [error, setError] = useState("")
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -31,21 +35,20 @@ export default function SignUpPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError("")
 
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    if (!formData.role) {
+      setError("Please select a role")
+      setIsLoading(false)
+      return
+    }
 
-    if (formData.role) {
-      // Store user data in localStorage for demo purposes
-      const userData = {
-        firstName: formData.firstName,
-        secondName: formData.secondName,
-        surname: formData.surname,
-        email: formData.email,
-        role: formData.role,
-      }
-      localStorage.setItem("schoolconnect_user", JSON.stringify(userData))
-      router.push("/dashboard")
+    const result = await signup(formData as any)
+
+    if (result.success) {
+      setSuccess(true)
+    } else {
+      setError(result.error || "Sign up failed. Please try again.")
     }
 
     setIsLoading(false)
@@ -90,7 +93,22 @@ export default function SignUpPage() {
             <CardDescription className="text-gray-600">Join the SchoolConnect community</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            {success ? (
+              <div className="text-center space-y-4">
+                <div className="mx-auto mb-4 p-3 bg-green-100 rounded-full w-fit">
+                  <CheckCircle className="h-8 w-8 text-green-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">Account Created Successfully!</h3>
+                <p className="text-gray-600 mb-6">
+                  We've sent a verification email to <strong>{formData.email}</strong>. 
+                  Please check your email and click the verification link to activate your account.
+                </p>
+                <Button asChild className="bg-blue-800 hover:bg-blue-900">
+                  <Link href="/signin">Go to Sign In</Link>
+                </Button>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-6">
               {/* Name Fields - 2 column grid on desktop */}
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -207,6 +225,13 @@ export default function SignUpPage() {
                 </div>
               </div>
 
+              {error && (
+                <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-md">
+                  <AlertCircle className="h-4 w-4" />
+                  <span className="text-sm">{error}</span>
+                </div>
+              )}
+
               <Button
                 type="submit"
                 className="w-full bg-blue-800 hover:bg-blue-900 text-white"
@@ -215,15 +240,18 @@ export default function SignUpPage() {
                 {isLoading ? "Creating Account..." : "Create Account"}
               </Button>
             </form>
+            )}
 
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
-                Already have an account?{" "}
-                <Link href="/signin" className="text-blue-800 hover:text-blue-900 font-medium">
-                  Sign in
-                </Link>
-              </p>
-            </div>
+            {!success && (
+              <div className="mt-6 text-center">
+                <p className="text-sm text-gray-600">
+                  Already have an account?{" "}
+                  <Link href="/signin" className="text-blue-800 hover:text-blue-900 font-medium">
+                    Sign in
+                  </Link>
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

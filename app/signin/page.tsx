@@ -9,37 +9,11 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { LogIn, Mail, Lock, AlertCircle, ArrowLeft, Users } from "lucide-react"
 import Link from "next/link"
-
-// Mock user data for authentication
-const mockUsers = [
-  {
-    firstName: "John",
-    secondName: "Michael",
-    surname: "Doe",
-    email: "teacher@school.com",
-    password: "password123",
-    role: "teacher" as const,
-  },
-  {
-    firstName: "Jane",
-    secondName: "Mary",
-    surname: "Smith",
-    email: "student@school.com",
-    password: "password123",
-    role: "student" as const,
-  },
-  {
-    firstName: "Robert",
-    secondName: "James",
-    surname: "Johnson",
-    email: "parent@school.com",
-    password: "password123",
-    role: "parent" as const,
-  },
-]
+import { useAuth } from "@/lib/auth/context"
 
 export default function SignInPage() {
   const router = useRouter()
+  const { signin } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
@@ -50,17 +24,12 @@ export default function SignInPage() {
     setIsLoading(true)
     setError("")
 
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    const result = await signin(email, password)
 
-    const user = mockUsers.find((u) => u.email === email && u.password === password)
-
-    if (user) {
-      // Store user data in localStorage for demo purposes
-      localStorage.setItem("schoolconnect_user", JSON.stringify(user))
+    if (result.success) {
       router.push("/dashboard")
     } else {
-      setError("Invalid email or password. Please try again.")
+      setError(result.error || "Sign in failed. Please try again.")
     }
 
     setIsLoading(false)
@@ -146,22 +115,18 @@ export default function SignInPage() {
               </Button>
             </form>
 
-            <div className="mt-6 text-center">
+            <div className="mt-6 text-center space-y-3">
               <p className="text-sm text-gray-600">
                 Don't have an account?{" "}
                 <Link href="/signup" className="text-blue-800 hover:text-blue-900 font-medium">
                   Sign up
                 </Link>
               </p>
-            </div>
-
-            <div className="mt-6 p-4 bg-blue-50 rounded-md">
-              <p className="text-sm text-blue-800 font-medium mb-2">Demo Accounts:</p>
-              <div className="text-xs text-blue-700 space-y-1">
-                <p>Teacher: teacher@school.com / password123</p>
-                <p>Student: student@school.com / password123</p>
-                <p>Parent: parent@school.com / password123</p>
-              </div>
+              <p className="text-sm text-gray-600">
+                <Link href="/forgot-password" className="text-blue-800 hover:text-blue-900 font-medium">
+                  Forgot your password?
+                </Link>
+              </p>
             </div>
           </CardContent>
         </Card>
