@@ -25,6 +25,10 @@ import Link from "next/link"
 import { useAuth } from "@/lib/auth/context"
 import AnnouncementForm from "@/components/announcements/AnnouncementForm"
 import AnnouncementList from "@/components/announcements/AnnouncementList"
+import QuizGeneratorForm from "@/components/quizzes/QuizGeneratorForm"
+import QuizList from "@/components/quizzes/QuizList"
+import QuizTaker from "@/components/quizzes/QuizTaker"
+import QuizAnalytics from "@/components/quizzes/QuizAnalytics"
 
 type UserRole = "teacher" | "student" | "parent"
 
@@ -36,12 +40,7 @@ interface User {
   role: UserRole
 }
 
-// Mock data
-const mockQuizzes = [
-  { id: 1, title: "Mathematics Quiz - Algebra", date: "2024-01-15", studentCount: 28 },
-  { id: 2, title: "Science Quiz - Physics", date: "2024-01-12", studentCount: 25 },
-  { id: 3, title: "English Quiz - Grammar", date: "2024-01-10", studentCount: 30 },
-]
+// Mock data (keeping for announcements backwards compatibility)
 
 const mockAnnouncements = [
   {
@@ -114,6 +113,8 @@ export default function DashboardPage() {
   const [likedMessages, setLikedMessages] = useState<number[]>([])
   const [currentView, setCurrentView] = useState<'list' | 'create' | 'edit'>('list')
   const [editingAnnouncement, setEditingAnnouncement] = useState<any>(null)
+  const [quizView, setQuizView] = useState<'list' | 'generate' | 'take' | 'analytics'>('list')
+  const [selectedQuiz, setSelectedQuiz] = useState<any>(null)
 
   useEffect(() => {
     if (!user) {
@@ -269,56 +270,75 @@ export default function DashboardPage() {
           }}
         />
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <BrainCircuit className="h-5 w-5 text-blue-800" />
-              <span>AI Quiz Generator</span>
-            </CardTitle>
-            <CardDescription>Create engaging quizzes for your students</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button className="bg-blue-800 hover:bg-blue-900 text-white" disabled>
-              Generate New Quiz (Coming Soon)
-            </Button>
-          </CardContent>
-        </Card>
+        {quizView === 'generate' && (
+          <QuizGeneratorForm 
+            onSuccess={(quiz) => {
+              setQuizView('list')
+              setSelectedQuiz(null)
+            }}
+            onCancel={() => {
+              setQuizView('list')
+              setSelectedQuiz(null)
+            }}
+          />
+        )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Your Quizzes</CardTitle>
-            <CardDescription>Recently created quizzes</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {mockQuizzes.map((quiz) => (
-                <div key={quiz.id} className="flex justify-between items-center p-4 border rounded-lg">
-                  <div>
-                    <h4 className="font-medium text-gray-900">{quiz.title}</h4>
-                    <p className="text-sm text-gray-600">Created: {quiz.date}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600">{quiz.studentCount} students</p>
-                    <Button variant="outline" size="sm" className="mt-1 bg-transparent" disabled>
-                      View Results (Coming Soon)
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        {quizView === 'analytics' && selectedQuiz && (
+          <QuizAnalytics 
+            quizId={selectedQuiz._id}
+            onClose={() => {
+              setQuizView('list')
+              setSelectedQuiz(null)
+            }}
+          />
+        )}
+
+        {quizView === 'list' && (
+          <QuizList 
+            viewMode="teacher"
+            onCreateNew={() => setQuizView('generate')}
+            onEdit={(quiz) => {
+              setSelectedQuiz(quiz)
+              setQuizView('analytics')
+            }}
+          />
+        )}
 
         {renderAnonymousMessagesSection()}
       </div>
     )
   }
 
-  const renderStudentContent = () => (
-    <div className="space-y-6">
-      <AnnouncementList viewMode="student" />
+  const renderStudentContent = () => {
+    if (quizView === 'take' && selectedQuiz) {
+      return (
+        <QuizTaker 
+          quiz={selectedQuiz}
+          onComplete={(result) => {
+            setQuizView('list')
+            setSelectedQuiz(null)
+          }}
+          onExit={() => {
+            setQuizView('list')
+            setSelectedQuiz(null)
+          }}
+        />
+      )
+    }
 
-      <Card className="bg-gradient-to-r from-blue-50 to-amber-50">
+    return (
+      <div className="space-y-6">
+        <AnnouncementList viewMode="student" />
+
+        <QuizList 
+          viewMode="student"
+          onTakeQuiz={(quiz) => {
+            setSelectedQuiz(quiz)
+            setQuizView('take')
+          }}
+        />
+
+        <Card className="bg-gradient-to-r from-blue-50 to-amber-50">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <RankIcon className={`h-6 w-6 ${currentRank.color}`} />
@@ -403,12 +423,15 @@ export default function DashboardPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
-  )
+      </div>
+    )
+  }
 
   const renderParentContent = () => (
     <div className="space-y-6">
       <AnnouncementList viewMode="parent" />
+
+      <QuizList viewMode="parent" />
 
       <Card>
         <CardHeader>
