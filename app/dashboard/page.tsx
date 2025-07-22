@@ -19,8 +19,12 @@ import {
   Zap,
   ThumbsUp,
   Send,
+  Plus,
 } from "lucide-react"
 import Link from "next/link"
+import { useAuth } from "@/lib/auth/context"
+import AnnouncementForm from "@/components/announcements/AnnouncementForm"
+import AnnouncementList from "@/components/announcements/AnnouncementList"
 
 type UserRole = "teacher" | "student" | "parent"
 
@@ -101,26 +105,24 @@ const mockAnonymousMessages = [
 
 export default function DashboardPage() {
   const router = useRouter()
-  const [user, setUser] = useState<User | null>(null)
+  const { user, signout } = useAuth()
   const [studentPoints] = useState(850)
   const [suggestion, setSuggestion] = useState("")
   const [teacherRating, setTeacherRating] = useState(0)
   const [voteChoice, setVoteChoice] = useState<"yes" | "no" | null>(null)
   const [anonymousMessages, setAnonymousMessages] = useState(mockAnonymousMessages)
   const [likedMessages, setLikedMessages] = useState<number[]>([])
+  const [currentView, setCurrentView] = useState<'list' | 'create' | 'edit'>('list')
+  const [editingAnnouncement, setEditingAnnouncement] = useState<any>(null)
 
   useEffect(() => {
-    // Check if user is logged in
-    const userData = localStorage.getItem("schoolconnect_user")
-    if (userData) {
-      setUser(JSON.parse(userData))
-    } else {
+    if (!user) {
       router.push("/signin")
     }
-  }, [router])
+  }, [user, router])
 
   const handleSignOut = () => {
-    localStorage.removeItem("schoolconnect_user")
+    signout()
     router.push("/")
   }
 
@@ -229,52 +231,93 @@ export default function DashboardPage() {
     </Card>
   )
 
-  const renderTeacherContent = () => (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <BrainCircuit className="h-5 w-5 text-blue-800" />
-            <span>AI Quiz Generator</span>
-          </CardTitle>
-          <CardDescription>Create engaging quizzes for your students</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button className="bg-blue-800 hover:bg-blue-900 text-white">Generate New Quiz</Button>
-        </CardContent>
-      </Card>
+  const renderTeacherContent = () => {
+    if (currentView === 'create') {
+      return (
+        <AnnouncementForm 
+          onSuccess={() => setCurrentView('list')}
+          onCancel={() => setCurrentView('list')}
+        />
+      )
+    }
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Quizzes</CardTitle>
-          <CardDescription>Recently created quizzes</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {mockQuizzes.map((quiz) => (
-              <div key={quiz.id} className="flex justify-between items-center p-4 border rounded-lg">
-                <div>
-                  <h4 className="font-medium text-gray-900">{quiz.title}</h4>
-                  <p className="text-sm text-gray-600">Created: {quiz.date}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-600">{quiz.studentCount} students</p>
-                  <Button variant="outline" size="sm" className="mt-1 bg-transparent">
-                    View Results
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+    if (currentView === 'edit' && editingAnnouncement) {
+      return (
+        <AnnouncementForm 
+          initialData={editingAnnouncement}
+          isEditing={true}
+          onSuccess={() => {
+            setCurrentView('list')
+            setEditingAnnouncement(null)
+          }}
+          onCancel={() => {
+            setCurrentView('list')
+            setEditingAnnouncement(null)
+          }}
+        />
+      )
+    }
 
-      {renderAnonymousMessagesSection()}
-    </div>
-  )
+    return (
+      <div className="space-y-6">
+        <AnnouncementList 
+          viewMode="teacher"
+          onCreateNew={() => setCurrentView('create')}
+          onEdit={(announcement) => {
+            setEditingAnnouncement(announcement)
+            setCurrentView('edit')
+          }}
+        />
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <BrainCircuit className="h-5 w-5 text-blue-800" />
+              <span>AI Quiz Generator</span>
+            </CardTitle>
+            <CardDescription>Create engaging quizzes for your students</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button className="bg-blue-800 hover:bg-blue-900 text-white" disabled>
+              Generate New Quiz (Coming Soon)
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Your Quizzes</CardTitle>
+            <CardDescription>Recently created quizzes</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {mockQuizzes.map((quiz) => (
+                <div key={quiz.id} className="flex justify-between items-center p-4 border rounded-lg">
+                  <div>
+                    <h4 className="font-medium text-gray-900">{quiz.title}</h4>
+                    <p className="text-sm text-gray-600">Created: {quiz.date}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-600">{quiz.studentCount} students</p>
+                    <Button variant="outline" size="sm" className="mt-1 bg-transparent" disabled>
+                      View Results (Coming Soon)
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {renderAnonymousMessagesSection()}
+      </div>
+    )
+  }
 
   const renderStudentContent = () => (
     <div className="space-y-6">
+      <AnnouncementList viewMode="student" />
+
       <Card className="bg-gradient-to-r from-blue-50 to-amber-50">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
@@ -365,26 +408,7 @@ export default function DashboardPage() {
 
   const renderParentContent = () => (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Calendar className="h-5 w-5 text-blue-800" />
-            <span>Latest Announcements</span>
-          </CardTitle>
-          <CardDescription>Stay updated with school news</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {mockAnnouncements.map((announcement) => (
-              <div key={announcement.id} className="p-4 border rounded-lg">
-                <h4 className="font-medium text-gray-900">{announcement.title}</h4>
-                <p className="text-gray-600 mt-1">{announcement.content}</p>
-                <p className="text-xs text-gray-500 mt-2">{announcement.timestamp}</p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <AnnouncementList viewMode="parent" />
 
       <Card>
         <CardHeader>
