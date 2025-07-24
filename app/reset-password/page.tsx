@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Lock, CheckCircle, AlertCircle, Users } from "lucide-react"
 import Link from "next/link"
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [password, setPassword] = useState("")
@@ -75,19 +75,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <Link href="/" className="flex items-center space-x-2">
-              <Users className="h-8 w-8 text-blue-800" />
-              <span className="text-xl font-bold text-gray-900">SchoolConnect</span>
-            </Link>
-          </div>
-        </div>
-      </header>
-
+    <>
       {/* Reset Password Form */}
       <div className="flex items-center justify-center p-4 mt-8">
         <Card className="w-full max-w-md">
@@ -194,6 +182,37 @@ export default function ResetPasswordPage() {
           </CardContent>
         </Card>
       </div>
+    </>
+  )
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
+            <Link href="/" className="flex items-center space-x-2">
+              <Users className="h-8 w-8 text-blue-800" />
+              <span className="text-xl font-bold text-gray-900">SchoolConnect</span>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <Suspense fallback={
+        <div className="flex items-center justify-center p-4 mt-8">
+          <Card className="w-full max-w-md">
+            <CardContent className="p-6 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-800 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Loading...</p>
+            </CardContent>
+          </Card>
+        </div>
+      }>
+        <ResetPasswordForm />
+      </Suspense>
     </div>
   )
 }
